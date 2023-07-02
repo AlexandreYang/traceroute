@@ -6,7 +6,7 @@ import (
 	"github.com/aeden/traceroute"
 	"net"
 	"sort"
-	"time"
+	"strings"
 )
 
 func printHop(hop traceroute.TracerouteHop) {
@@ -68,11 +68,26 @@ func printHops(rawReplies []traceroute.TracerouteHop) {
 		hops = append(hops, hop)
 	}
 	sort.Ints(hops)
-	for _, hop := range hops {
+	for hopTTL, hop := range hops {
 		replyList := replies[hop]
+		fmt.Printf("%d\n", hopTTL)
+		prevAddr := ""
 		for _, hop := range replyList {
-			printHop(hop)
-			//log.Printf("%d. %v %v", reply.TTL, reply.Address, reply.RTT)
+			addr := fmt.Sprintf("%v.%v.%v.%v", hop.Address[0], hop.Address[1], hop.Address[2], hop.Address[3])
+			hostOrAddr := addr
+			if hop.Host != "" {
+				hostOrAddr = hop.Host
+			}
+			printAddr := fmt.Sprintf("%v (%v)", hostOrAddr, addr)
+			if hostOrAddr == prevAddr {
+				printAddr = strings.Repeat(" ", len(printAddr))
+			}
+			if hop.Success {
+				fmt.Printf("  %v  %v\n", printAddr, hop.ElapsedTime)
+			} else {
+				fmt.Printf("   *\n")
+			}
+			prevAddr = hostOrAddr
 		}
 	}
 }
@@ -86,15 +101,15 @@ func getHops(hops []traceroute.TracerouteHop, options traceroute.TracerouteOptio
 				fmt.Println()
 				return
 			}
-			printHop(hop)
+			//printHop(hop)
 			hops = append(hops, hop)
 		}
 	}()
 
 	fmt.Printf("options %+v\n\n", options)
 	for i := 0; i < times; i++ {
-		fmt.Printf("== Round %d ==\n", i)
-		time.Sleep(500 * time.Millisecond)
+		//fmt.Printf("== Round %d ==\n", i)
+		//time.Sleep(50 * time.Millisecond)
 		_, err = traceroute.Traceroute(host, &options, c)
 		if err != nil {
 			fmt.Printf("Error: ", err)
