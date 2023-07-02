@@ -37,25 +37,31 @@ func main() {
 	var t = flag.Int("t", 3, `Times`)
 
 	flag.Parse()
-	host := flag.Arg(0)
+	hosts := flag.Args()
 	options := traceroute.TracerouteOptions{}
 	options.SetRetries(*q - 1)
 	options.SetMaxHops(*m + 1)
 	options.SetFirstHop(*f)
 	times := *t
 
-	ipAddr, err := net.ResolveIPAddr("ip", host)
-	if err != nil {
-		return
+	fmt.Printf("hosts %v\n", hosts)
+
+	var allHops [][]traceroute.TracerouteHop
+	for _, host := range hosts {
+
+		ipAddr, err := net.ResolveIPAddr("ip", host)
+		if err != nil {
+			return
+		}
+
+		fmt.Printf("traceroute to %v (%v), %v hops max, %v byte packets\n", host, ipAddr, options.MaxHops(), options.PacketSize())
+
+		hostHops := getHops(options, times, err, host)
+		printHops(hostHops)
+		allHops = append(allHops, hostHops...)
 	}
 
-	fmt.Printf("traceroute to %v (%v), %v hops max, %v byte packets\n", host, ipAddr, options.MaxHops(), options.PacketSize())
-
-	allhops := getHops(options, times, err, host)
-
-	printHops(allhops)
-
-	graph(allhops)
+	graph(allHops)
 }
 
 func printHops(allhops [][]traceroute.TracerouteHop) {
