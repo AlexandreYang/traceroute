@@ -177,18 +177,22 @@ func graph(allhops [][]traceroute.TracerouteHop) {
 
 	for _, hops := range allhops {
 		var prevNode *cgraph.Node
+		var nodeLabel string
 		for _, hop := range hops {
 			ipaddr := net.IP(hop.Address[:]).String()
-			var nodeName string
 			if hop.Host != "" {
-				nodeName = fmt.Sprintf("%s\n(%s)", hop.Host, ipaddr)
+				nodeLabel = fmt.Sprintf("%s\n(%s)", hop.Host, ipaddr)
 			} else {
-				nodeName = ipaddr
+				nodeLabel = ipaddr
 			}
-			curNode, err := graph.CreateNode(nodeName)
+			curNode, err := graph.CreateNode(ipaddr)
 			if err != nil {
 				log.Fatal(err)
 			}
+			if prevNode == nil {
+				curNode.SetColor("green")
+			}
+			curNode.SetLabel(nodeLabel)
 			if prevNode != nil {
 				e, err := graph.CreateEdge("edge name", prevNode, curNode)
 				if err != nil {
@@ -198,6 +202,7 @@ func graph(allhops [][]traceroute.TracerouteHop) {
 			}
 			prevNode = curNode
 		}
+		prevNode.SetColor("red")
 	}
 
 	var buf bytes.Buffer
