@@ -194,7 +194,7 @@ func graph(allhops [][]traceroute.TracerouteHop) {
 				if err != nil {
 					log.Fatal(err)
 				}
-				e.SetLabel(fmt.Sprintf("%v", hop.ElapsedTime))
+				e.SetLabel(fmt.Sprintf("%.1fms", float64(hop.ElapsedTime.Microseconds())/1000.0))
 			}
 			prevNode = curNode
 		}
