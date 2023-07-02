@@ -190,10 +190,11 @@ func graph(allhops [][]traceroute.TracerouteHop) {
 				log.Fatal(err)
 			}
 			if prevNode != nil {
-				_, err := graph.CreateEdge("e", prevNode, curNode)
+				e, err := graph.CreateEdge("edge name", prevNode, curNode)
 				if err != nil {
 					log.Fatal(err)
 				}
+				e.SetLabel(fmt.Sprintf("%v", hop.ElapsedTime))
 			}
 			prevNode = curNode
 		}
