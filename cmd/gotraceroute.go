@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/aeden/traceroute"
 	"github.com/goccy/go-graphviz"
+	"github.com/goccy/go-graphviz/cgraph"
 	"log"
 	"net"
 	"sort"
@@ -50,21 +51,23 @@ func main() {
 
 	fmt.Printf("traceroute to %v (%v), %v hops max, %v byte packets\n", host, ipAddr, options.MaxHops(), options.PacketSize())
 
-	hops := []traceroute.TracerouteHop{}
+	allhops := getHops(options, times, err, host)
 
-	hops = getHops(hops, options, times, err, host)
+	printHops(allhops)
 
-	printHops(hops)
-
-	graph()
+	graph(allhops)
 }
 
-func printHops(rawReplies []traceroute.TracerouteHop) {
+func printHops(allhops [][]traceroute.TracerouteHop) {
 	//for _, hop := range hops {
 	//	printHop(hop)
 	//}
+	combinedHops := []traceroute.TracerouteHop{}
+	for _, hops := range allhops {
+		combinedHops = append(combinedHops, hops...)
+	}
 	replies := make(map[int][]traceroute.TracerouteHop)
-	for _, reply := range rawReplies {
+	for _, reply := range combinedHops {
 		replies[reply.TTL] = append(replies[reply.TTL], reply)
 	}
 
@@ -112,33 +115,35 @@ func printHops(rawReplies []traceroute.TracerouteHop) {
 	}
 }
 
-func getHops(hops []traceroute.TracerouteHop, options traceroute.TracerouteOptions, times int, err error, host string) []traceroute.TracerouteHop {
-	c := make(chan traceroute.TracerouteHop, 0)
-	go func() {
-		for {
-			hop, ok := <-c
-			if !ok {
-				fmt.Println()
-				return
-			}
-			//printHop(hop)
-			hops = append(hops, hop)
-		}
-	}()
-
+func getHops(options traceroute.TracerouteOptions, times int, err error, host string) [][]traceroute.TracerouteHop {
 	fmt.Printf("options %+v\n\n", options)
+	allhops := [][]traceroute.TracerouteHop{}
 	for i := 0; i < times; i++ {
+		hops := []traceroute.TracerouteHop{}
+		c := make(chan traceroute.TracerouteHop, 0)
+		go func() {
+			for {
+				hop, ok := <-c
+				if !ok {
+					fmt.Println()
+					return
+				}
+				printHop(hop)
+				hops = append(hops, hop)
+			}
+		}()
+
 		//fmt.Printf("== Round %d ==\n", i)
 		//time.Sleep(50 * time.Millisecond)
 		_, err = traceroute.Traceroute(host, &options, c)
 		if err != nil {
 			fmt.Printf("Error: ", err)
 		}
+		allhops = append(allhops, hops)
 	}
-	close(c)
-	return hops
+	return allhops
 }
-func graph() {
+func graph(allhops [][]traceroute.TracerouteHop) {
 	g := graphviz.New()
 	graph, err := g.Graph()
 	if err != nil {
@@ -150,19 +155,38 @@ func graph() {
 		}
 		g.Close()
 	}()
-	n, err := graph.CreateNode("n")
-	if err != nil {
-		log.Fatal(err)
+	//n, err := graph.CreateNode("n")
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//m, err := graph.CreateNode("m")
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//e, err := graph.CreateEdge("e", n, m)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//e.SetLabel("e")
+
+	for _, hops := range allhops {
+		var prevNode *cgraph.Node
+		for _, hop := range hops {
+			ipAddr := net.IP(hop.Address[:]).String()
+			curNode, err := graph.CreateNode(ipAddr)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if prevNode != nil {
+				_, err := graph.CreateEdge("e", prevNode, curNode)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+			prevNode = curNode
+		}
 	}
-	m, err := graph.CreateNode("m")
-	if err != nil {
-		log.Fatal(err)
-	}
-	e, err := graph.CreateEdge("e", n, m)
-	if err != nil {
-		log.Fatal(err)
-	}
-	e.SetLabel("e")
+
 	var buf bytes.Buffer
 	if err := g.Render(graph, "dot", &buf); err != nil {
 		log.Fatal(err)

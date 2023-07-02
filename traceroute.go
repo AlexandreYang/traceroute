@@ -164,9 +164,9 @@ func notify(hop TracerouteHop, channels []chan TracerouteHop) {
 }
 
 func closeNotify(channels []chan TracerouteHop) {
-	//for _, c := range channels {
-	//	close(c)
-	//}
+	for _, c := range channels {
+		close(c)
+	}
 }
 
 // Traceroute uses the given dest (hostname) and options to execute a traceroute
