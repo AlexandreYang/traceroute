@@ -72,23 +72,30 @@ func printHops(rawReplies []traceroute.TracerouteHop) {
 		replyList := replies[hop]
 		fmt.Printf("%d\n", hopTTL)
 		prevAddr := ""
+		hopByAddr := make(map[[4]byte][]traceroute.TracerouteHop)
 		for _, hop := range replyList {
-			addr := fmt.Sprintf("%v.%v.%v.%v", hop.Address[0], hop.Address[1], hop.Address[2], hop.Address[3])
-			hostOrAddr := addr
-			if hop.Host != "" {
-				hostOrAddr = hop.Host
-			}
-			printAddr := fmt.Sprintf("%v (%v)", hostOrAddr, addr)
-			if hostOrAddr == prevAddr {
-				printAddr = strings.Repeat(" ", len(printAddr))
-			}
-			if hop.Success {
-				fmt.Printf("  %v  %v\n", printAddr, hop.ElapsedTime)
-			} else {
-				fmt.Printf("   *\n")
-			}
-			prevAddr = hostOrAddr
+			hopByAddr[hop.Address] = append(hopByAddr[hop.Address], hop)
 		}
+		for _, hops := range hopByAddr {
+			for _, hop := range hops {
+				addr := fmt.Sprintf("%v.%v.%v.%v", hop.Address[0], hop.Address[1], hop.Address[2], hop.Address[3])
+				hostOrAddr := addr
+				if hop.Host != "" {
+					hostOrAddr = hop.Host
+				}
+				printAddr := fmt.Sprintf("%v (%v)", hostOrAddr, addr)
+				if hostOrAddr == prevAddr {
+					printAddr = strings.Repeat(" ", len(printAddr))
+				}
+				if hop.Success {
+					fmt.Printf("  %v  %v\n", printAddr, hop.ElapsedTime)
+				} else {
+					fmt.Printf("   *\n")
+				}
+				prevAddr = hostOrAddr
+			}
+		}
+
 	}
 }
 
