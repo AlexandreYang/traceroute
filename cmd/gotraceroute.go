@@ -68,10 +68,11 @@ func printHops(rawReplies []traceroute.TracerouteHop) {
 		hops = append(hops, hop)
 	}
 	sort.Ints(hops)
-	for hopTTL, hop := range hops {
+	for _, hop := range hops {
 		replyList := replies[hop]
-		fmt.Printf("%d\n", hopTTL)
+		//fmt.Printf("%d\n", hopTTL)
 		prevAddr := ""
+		prevTTL := 0
 		hopByAddr := make(map[[4]byte][]traceroute.TracerouteHop)
 		for _, hop := range replyList {
 			hopByAddr[hop.Address] = append(hopByAddr[hop.Address], hop)
@@ -84,16 +85,23 @@ func printHops(rawReplies []traceroute.TracerouteHop) {
 					hostOrAddr = hop.Host
 				}
 				printAddr := fmt.Sprintf("%v (%v)", hostOrAddr, addr)
-				if hostOrAddr == prevAddr {
-					printAddr = strings.Repeat(" ", len(printAddr))
-				}
 				if hop.Success {
-					fmt.Printf("  %v  %v\n", printAddr, hop.ElapsedTime)
+					if hostOrAddr == prevAddr {
+						fmt.Printf(" %v", hop.ElapsedTime)
+					} else {
+						ttl := fmt.Sprintf("%d", hop.TTL)
+						if hop.TTL == prevTTL {
+							ttl = strings.Repeat(" ", len(ttl))
+						}
+						fmt.Printf("%s  %v  %v", ttl, printAddr, hop.ElapsedTime)
+						prevTTL = hop.TTL
+					}
 				} else {
-					fmt.Printf("   *\n")
+					fmt.Printf("   *")
 				}
 				prevAddr = hostOrAddr
 			}
+			fmt.Printf("\n")
 		}
 
 	}
